@@ -2,6 +2,7 @@ import { connect } from "@/dbConfig/dbConfig";
 import User from "@/models/userModel"
 import { NextRequest, NextResponse } from "next/server";
 import bcryptjs from "bcryptjs";
+import { sendEMail } from "@/helpers/mailer";
 
 connect()
 
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
         const reqBody = await request.json();
         const { username, email, password } = reqBody;
 
-        const user = await User.findOne({ email: email });
+        const user = await User.findOne({ email });
         if (user) {
             return NextResponse.json({ "Error": "Email Already Exists" }, { status: 400 })
         }
@@ -23,31 +24,15 @@ export async function POST(request: NextRequest) {
         });
 
         const savedUser = await createdUser.save();
-        console.log(savedUser);
+
+        await sendEMail({email, emailType: "VERIFY", userId: savedUser._id});
+
 
         return NextResponse.json({
             message: "created user successfully! ",
             success: true,
-            savedUser
         });
 
-
-        // if (!username ||!email ||!password ) throw new Error("Please provide all required fields");
-        // Check for existing user with same credentials
-        // let foundUser = await User.findOne({$or:[
-        //     {"_id": {$ne : undefined}},
-        //     {'username': username },
-        //     {'email'   : email }]});
-        //     console.log('found',foundUser);
-        //     if(!foundUser &&!(await checkPasswordStrength(password)))
-        //     throw new Error(`Username or Email already exists`);
-        //     else{
-        //         var saltRounds=12
-        //         const hashedPassowrd = await hashPasswordWithSaltAndRounds(saltRounds,
-        //             String(reqBody['password']));
-        //             delete reqBody["confirm-password"]
-        //             Object.assign(foundUser,{...reqBody,"hashedPassword":hashedPassowrd })
-        //             updatedUser = await foundUser?.save().catch((err)=>console.log(err))
 
     } catch (error: any) {
         return NextResponse.json({ error: error.message },
